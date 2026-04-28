@@ -52,6 +52,17 @@ scripts/          data collection + cleaning pipeline
 notebooks/        QLoRA fine-tuning (Colab)
 data/processed/   formatted dataset (also on HuggingFace)
 
+## training results
+
+100 steps on a T4 GPU. Loss dropped fast in the first 50 steps then 
+leveled off — pretty typical for a small dataset with a narrow domain.
+
+![training loss](assets/training_loss.png)
+
+Not fully converged, but good enough to give correct answers on the 
+errors it was trained on. Planning a longer 500-step run on the 
+cleaned dataset next.
+
 ## what's next
 
 - [ ] Post-training quantization (GPTQ/AWQ) + latency benchmarks  

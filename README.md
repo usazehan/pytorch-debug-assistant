@@ -20,11 +20,11 @@ them as instruction-tuning pairs. Published at
 `zehansunesara/pytorch-debug-assistant` on HuggingFace.
 
 **Fine-tuning** — QLoRA (4-bit, r=16) on top of Phi-3-mini-4k-instruct, 
-trained on a T4 GPU via Google Colab. Only ~1-2% of parameters actually 
+trained on a T4 GPU via Kaggle. Only ~1-2% of parameters actually 
 update during training, which is the whole point of LoRA.
 
-**Serving** — FastAPI backend, Gradio frontend, Docker for local runs. 
-Live demo on HuggingFace Spaces.
+**Serving** — FastAPI backend + Gradio frontend coming in Phase 3.
+
 
 ## usage
 

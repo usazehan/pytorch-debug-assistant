@@ -15,10 +15,21 @@ ERROR_KEYWORDS = [
 ]
 
 def clean_html(text: str) -> str:
-    """Strip HTML tags from SO posts."""
     if not text:
         return ""
-    return BeautifulSoup(text, "html.parser").get_text(separator="\n")
+    # Parse HTML
+    soup = BeautifulSoup(text, "html.parser")
+    # Preserve code blocks with markers
+    for code in soup.find_all("code"):
+        code.replace_with(f"\n```\n{code.get_text()}\n```\n")
+    text = soup.get_text(separator="\n")
+    # Clean up HTML entities that slipped through
+    text = text.replace("&quot;", '"').replace("&amp;", "&")
+    text = text.replace("&lt;", "<").replace("&gt;", ">")
+    text = text.replace("&#39;", "'")
+    # Collapse excessive whitespace
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
 
 def clean_markdown(text: str) -> str:
     """Light cleanup for GitHub markdown."""
@@ -72,24 +83,77 @@ def process_github(path: Path) -> list:
             ))
     return records
 
+def is_high_quality_answer(answer: str, score: int) -> bool:
+    """Filter for genuinely useful answers."""
+    if score < 5:                    # low upvotes = likely unhelpful
+        return False
+    if len(answer) < 100:            # too short to be useful
+        return False
+    if answer.count('\n') < 2:       # no structure = likely not a real fix
+        return False
+    return True
+
+def is_error_question(title: str, body: str) -> bool:
+    """Stricter check — must look like an actual error, not a how-to."""
+    text = (title + " " + body).lower()
+    
+    # Must have at least one error signal
+    error_signals = [
+        "error", "exception", "traceback", "runtimeerror", "valueerror",
+        "typeerror", "cuda", "nan", "inf", "mismatch", "failed", "crash",
+        "oom", "out of memory", "attributeerror", "indexerror", "assertion",
+        "backward", "grad", "loss is nan", "not defined", "no attribute",
+    ]
+    has_error = any(kw in text for kw in error_signals)
+    
+    # Exclude generic how-to questions
+    howto_signals = [
+        "how to install", "how do i install", "what is the best",
+        "which is better", "recommend", "tutorial", "getting started",
+        "how to use", "introduction to", "difference between",
+    ]
+    is_howto = any(kw in text for kw in howto_signals)
+    
+    return has_error and not is_howto
+
 def process_stackoverflow(path: Path) -> list:
     records = []
+    skipped_score = 0
+    skipped_quality = 0
+    skipped_howto = 0
+
     with open(path) as f:
         for line in tqdm(f, desc="StackOverflow"):
             item = json.loads(line)
-            title = item.get("title", "")
-            question = clean_html(item.get("body", ""))
-            answer = clean_html(item.get("answer", ""))
+            title       = item.get("title", "")
+            question    = clean_html(item.get("body", ""))
+            answer      = clean_html(item.get("answer", ""))
+            answer_score = item.get("answer_score", 0)
 
-            if not answer or len(answer) < 50:
+            # Filter 1: answer score
+            if not is_high_quality_answer(answer, answer_score):
+                skipped_score += 1
                 continue
-            if not is_error_related(f"{title} {question}"):
+
+            # Filter 2: must be error-related, not a how-to
+            if not is_error_question(title, question):
+                skipped_howto += 1
+                continue
+
+            # Filter 3: question body must have substance
+            if len(question) < 80:
+                skipped_quality += 1
                 continue
 
             records.append(format_prompt(
                 input_text=f"{title}\n\n{question}",
                 output_text=answer
             ))
+
+    print(f"  Skipped (low answer score): {skipped_score}")
+    print(f"  Skipped (how-to/not error): {skipped_howto}")
+    print(f"  Skipped (low quality):      {skipped_quality}")
+    print(f"  Kept: {len(records)}")
     return records
 
 def main():

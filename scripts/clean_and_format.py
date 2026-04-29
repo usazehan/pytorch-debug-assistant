@@ -8,10 +8,24 @@ OUT_FILE = Path("data/processed/dataset.jsonl")
 
 # Keywords that signal an error-related post
 ERROR_KEYWORDS = [
-    "error", "exception", "traceback", "runtimeerror", "valueerror",
-    "typeerror", "cuda", "nan", "inf", "shape", "dimension", "mismatch",
-    "failed", "crash", "oom", "out of memory", "attributeerror",
-    "indexerror", "assertion", "grad", "backward", "loss"
+    "runtimeerror",
+    "valueerror",
+    "typeerror",
+    "attributeerror",
+    "indexerror",
+    "assertionerror",
+    "cuda out of memory",
+    "expected all tensors",
+    "should be the same",
+    "size mismatch",
+    "shape mismatch",
+    "mat1 and mat2",
+    "does not require grad",
+    "grad can be implicitly created",
+    "input is not contiguous",
+    "traceback",
+    "exception",
+    "error:"
 ]
 
 def clean_html(text: str) -> str:

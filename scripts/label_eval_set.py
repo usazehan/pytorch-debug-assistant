@@ -66,29 +66,52 @@ ERROR_KEYWORDS = [
     "attributeerror",
     "indexerror",
     "assertionerror",
+    "modulenotfounderror",
+    "importerror",
+
     "cuda out of memory",
+    "out of memory",
     "expected all tensors",
     "should be the same",
+    "expected object of scalar type",
+    "found no nvidia driver",
+    "torch not compiled with cuda enabled",
+    "no module named",
+
     "size mismatch",
     "shape mismatch",
     "mat1 and mat2",
     "does not require grad",
     "grad can be implicitly created",
     "input is not contiguous",
+
+    "can't assign",
+    "cannot convert",
+    "can't convert",
+    "nan",
+    "exploding gradients",
+
     "traceback",
     "exception",
-    "error:"
+    "error:",
 ]
 
 def load_candidates():
     candidates = []
+
     with open(RAW_FILE) as f:
         for line in f:
             item = json.loads(line)
-            # Only keep items with error signals
-            text = (item.get("title", "") + item.get("body", "")).lower()
+
+            text = (
+                item.get("title", "") + " " +
+                item.get("body", "") + " " +
+                item.get("answer", "")
+            ).lower()
+
             if any(kw in text for kw in ERROR_KEYWORDS):
                 candidates.append(item)
+
     random.shuffle(candidates)
     return candidates
 

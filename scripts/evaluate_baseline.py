@@ -84,7 +84,6 @@ def predict_category(example: dict[str, Any]) -> str:
         "can't convert cuda tensor to numpy",
         "cannot convert cuda tensor to numpy",
         "use tensor.cpu()",
-        "found no nvidia driver",
     ]):
         return "device_mismatch"
 
@@ -102,6 +101,7 @@ def predict_category(example: dict[str, Any]) -> str:
         "install torch",
         "cpu-only",
         "cpu only",
+        "found no nvidia driver",
     ]):
         return "environment_error"
 
@@ -197,8 +197,8 @@ def predict_category(example: dict[str, Any]) -> str:
 
     # Generic training loop/API misuse
     if any(phrase in text for phrase in [
-        "crossentropyloss(",
         "device-side assert",
+        "crossentropyloss(",
         "target",
         "label",
         "labels",

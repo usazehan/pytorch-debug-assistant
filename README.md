@@ -63,6 +63,37 @@ Not fully converged, but good enough to give correct answers on the
 errors it was trained on. Planning a longer 500-step run on the 
 cleaned dataset next.
 
+## Evaluation Results
+
+I evaluated the PyTorch Debug Assistant on a held-out 100-example benchmark of real PyTorch debugging issues. Each example includes an error/question context and a ground-truth category such as `dtype_mismatch`, `cuda_oom`, `device_mismatch`, `dataloader_error`, or `environment_error`.
+
+The evaluator measures:
+
+- **Category Accuracy**: whether the model predicts the correct debugging category
+- **Valid JSON Rate**: whether the model returns the required structured JSON schema
+- **Average Latency**: average generation time per example
+
+| System | Eval Examples | Category Accuracy | Valid JSON Rate | Notes |
+|---|---:|---:|---:|---|
+| Heuristic baseline | 100 | ~78% | N/A | Rule-based keyword classifier |
+| Base Phi-3-mini | 100 | 62% | 91% | Zero-shot structured JSON prompting |
+| Old LoRA adapter | 5 | 40% | 80% | Smoke test only; trained before structured-output benchmark |
+| New structured LoRA adapter | 100 | TBD | TBD | Next training iteration |
+
+### Current Takeaway
+
+The base Phi-3-mini model achieved **62% category accuracy** and **91% valid JSON rate** on the 100-example benchmark. The older LoRA adapter performed worse on a 5-example smoke test, which suggests the original fine-tuning objective was not aligned with the new structured debugging task.
+
+The next iteration will fine-tune the model specifically on structured debugging outputs:
+
+```json
+{
+  "category": "dtype_mismatch",
+  "root_cause": "The input tensor dtype does not match the model or loss expectation.",
+  "fix": "Convert the tensor to the expected dtype before passing it into the model or loss.",
+  "fix_code": "x = x.float()"
+}
+
 ## what's next
 
 - [ ] Post-training quantization (GPTQ/AWQ) + latency benchmarks  

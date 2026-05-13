@@ -187,7 +187,6 @@ def load_model(
 ):
     tokenizer = AutoTokenizer.from_pretrained(
         base_model_id,
-        trust_remote_code=True,
     )
 
     if tokenizer.pad_token is None:
@@ -213,7 +212,7 @@ def load_model(
         device_map="auto",
         torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
         quantization_config=quantization_config,
-        trust_remote_code=True,
+        attn_implementation="eager",
     )
 
     if adapter_id:

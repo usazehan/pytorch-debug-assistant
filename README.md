@@ -93,6 +93,7 @@ The next iteration will fine-tune the model specifically on structured debugging
   "fix": "Convert the tensor to the expected dtype before passing it into the model or loss.",
   "fix_code": "x = x.float()"
 }
+```
 
 ## what's next
 

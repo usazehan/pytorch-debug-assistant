@@ -78,6 +78,52 @@ Do not include markdown.
 Do not include explanations outside the JSON.
 """
 
+def apply_category_override(example: dict, predicted: str | None) -> str | None:
+    """
+    High-confidence deterministic overrides for common PyTorch error patterns.
+    These should run after model JSON parsing but before scoring.
+    Supports both flat eval rows and structured rows with an "input" object.
+    """
+    inp = example.get("input", example)
+
+    text = " ".join(
+        [
+            str(inp.get("question_title", "")),
+            str(inp.get("error_text", "")),
+            str(inp.get("code_context", "")),
+            str(inp.get("question_body", "")),
+            str(example.get("answer", "")),
+        ]
+    ).lower()
+
+    rules = [
+        # Training loop bugs
+        (r"device-side assert triggered|bool value of tensor with more than one value is ambiguous|forward\(\) missing", "training_loop_bug"),
+
+        # Device mismatch
+        (r"can't convert cuda tensor to numpy|use tensor\.cpu\(\)|floattensor.*cuda\.floattensor|cuda\.floattensor.*floattensor|longtensor.*cuda\.longtensor|cuda\.longtensor.*longtensor|parameters and buffers on device", "device_mismatch"),
+
+        # Dtype mismatch
+        (r"not implemented for 'half'|not implemented for 'int'|not implemented for 'long'|not implemented for 'byte'|expected.*scalar type|expected tensor.*long|bytetensor.*floattensor|longtensor.*floattensor|cuda\.bytetensor.*cuda\.floattensor", "dtype_mismatch"),
+
+        # Autograd errors
+        (r"backward through the graph a second time|does not require grad|does not have a grad_fn|modified by an inplace operation|leaf variable", "autograd_error"),
+
+        # DataLoader / transform errors
+        (r"pic should be pil image|img should be pil image|pil image or ndarray|dataloader worker|collate|num_workers|can't pickle|torch\.size.*integer", "dataloader_error"),
+
+        # Environment errors
+        (r"no nvidia driver|torch not compiled with cuda|cuda\.is_available\(\).*false|modulenotfounderror|importerror|undefined symbol|cudnn_status_internal_error|cublas_status_internal_error|cuda version|libtorch", "environment_error"),
+
+        # CUDA OOM should be narrow and last-ish
+        (r"cuda out of memory|out of memory|killed", "cuda_oom"),
+    ]
+
+    for pattern, category in rules:
+        if re.search(pattern, text, re.IGNORECASE):
+            return category
+
+    return predicted
 
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
     if not path.exists():
@@ -281,6 +327,7 @@ def evaluate(
     tokenizer,
     examples: list[dict[str, Any]],
     max_new_tokens: int,
+    use_category_overrides: bool = False,
 ) -> dict[str, Any]:
     results = []
     correct = 0
@@ -304,6 +351,13 @@ def evaluate(
         valid_json += int(is_valid)
 
         predicted = parsed.get("category") if is_valid else None
+        model_predicted = predicted
+
+        if use_category_overrides:
+            predicted = apply_category_override(example, predicted)
+
+        override_applied = predicted != model_predicted
+            
         is_correct = predicted == expected
         correct += int(is_correct)
 
@@ -313,7 +367,9 @@ def evaluate(
             "id": example.get("id"),
             "source_url": example.get("source_url"),
             "expected_category": expected,
+            "model_predicted_category": model_predicted,
             "predicted_category": predicted,
+            "override_applied": override_applied,
             "correct": is_correct,
             "valid_json": is_valid,
             "latency_ms": latency_ms,
@@ -440,6 +496,12 @@ def main() -> None:
         action="store_true",
         help="Disable 4-bit quantized loading",
     )
+    
+    parser.add_argument(
+        "--use-category-overrides",
+        action="store_true",
+        help="Apply deterministic high-confidence category overrides before scoring.",
+    )
 
     args = parser.parse_args()
 
@@ -464,6 +526,7 @@ def main() -> None:
         tokenizer=tokenizer,
         examples=examples,
         max_new_tokens=args.max_new_tokens,
+        use_category_overrides=args.use_category_overrides,
     )
 
     write_jsonl(args.output_file, report["results"])

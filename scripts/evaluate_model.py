@@ -63,6 +63,17 @@ The category must be exactly one of:
 - training_loop_bug
 - architecture_mismatch
 
+Category decision rules:
+- Use "cuda_oom" ONLY when the error explicitly says CUDA out of memory, out of memory, or the process was killed because of memory pressure.
+- Use "environment_error" for install/import/version/driver/CUDA setup issues, including "no NVIDIA driver", "Torch not compiled with CUDA enabled", "torch.cuda.is_available() returns False", missing packages, or CUDA/cuDNN version mismatch.
+- Use "loss_issue" for NaN loss, loss not decreasing, exploding gradients, parameters becoming NaN/zero during training, or unstable optimization behavior.
+- Use "dtype_mismatch" for Float/Double/Half/Long/Byte tensor type mismatches.
+- Use "device_mismatch" for CPU vs CUDA tensor placement problems.
+- Use "tensor_shape_mismatch" for tensor size, dimension, broadcasting, matmul, or reshape/view problems.
+- Use "architecture_mismatch" for layer/channel mismatches, state_dict loading problems, missing/unexpected keys, or incompatible model heads.
+
+Keep root_cause and fix to one concise sentence each.
+Keep fix_code to one minimal code snippet or an empty string.
 Do not include markdown.
 Do not include explanations outside the JSON.
 """

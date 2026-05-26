@@ -237,6 +237,46 @@ def has_error_signal(title: str, body: str, error_text: str) -> bool:
     combined = clean_html(f"{title}\n{body}\n{error_text}")
     return bool(ERROR_SIGNAL_RE.search(combined))
 
+def compact_text(text: str, max_chars: int = 240) -> str:
+    """Compact natural-language text without cutting mid-sentence when possible."""
+    text = re.sub(r"\s+", " ", text or "").strip()
+    text = text.replace("` `", "").strip()
+
+    if len(text) <= max_chars:
+        return text
+
+    # Prefer complete sentences
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    kept = []
+
+    for sentence in sentences:
+        candidate = " ".join(kept + [sentence]).strip()
+        if len(candidate) <= max_chars:
+            kept.append(sentence)
+        else:
+            break
+
+    if kept:
+        return " ".join(kept).strip()
+
+    # Fallback: cut at word boundary
+    return text[:max_chars].rsplit(" ", 1)[0].strip() + "."
+
+def compact_code(code: str, max_chars: int = 300, max_lines: int = 8) -> str:
+    """Compact code while preserving line breaks."""
+    code = html.unescape(code or "").strip()
+
+    if not code:
+        return ""
+
+    lines = [line.rstrip() for line in code.splitlines() if line.strip()]
+    code = "\n".join(lines[:max_lines]).strip()
+
+    if len(code) <= max_chars:
+        return code
+
+    return code[:max_chars].rsplit("\n", 1)[0].strip()
+
 # --- Main Script ---
 
 def main():
@@ -312,6 +352,10 @@ def main():
                 
             # Extract Output fields from the accepted answer
             root_cause, fix, fix_code = extract_answer_components(answer)
+            
+            root_cause = compact_text(root_cause, max_chars=220)
+            fix = compact_text(fix, max_chars=240)
+            fix_code = compact_code(fix_code, max_chars=300, max_lines=8)
             
             # Construct JSONL row
             structured_row = {

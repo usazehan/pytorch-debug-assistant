@@ -1,0 +1,6 @@
+{
+  "embedding_model": "all-MiniLM-L6-v2",
+  "num_examples": 86,
+  "faiss_index": "data/index/faiss.index",
+  "metadata": "data/index/metadata.jsonl"
+}

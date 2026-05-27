@@ -5,3 +5,5 @@ beautifulsoup4
 pandas
 tqdm
 python-dotenv
+faiss-cpu
+sentence-transformers
